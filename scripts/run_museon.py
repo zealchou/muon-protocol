@@ -31,6 +31,7 @@ from muon.summary import save_summary, save_exam_summary
 from muon.vouch import evaluate_for_vouch, build_auto_vouch
 from muon.arl import register_agent, record_test_result, record_vouch, get_arl
 from muon.responder import decide_and_generate_reply, build_museon_reply
+from muon.tribunal import is_blacklisted, file_challenge, get_open_challenges
 
 # === State ===
 
@@ -61,6 +62,9 @@ async def handle_agent_card(client: Client, museon_keys: Keys, event: Event):
         return
     if author_hex in challenged_agents:
         return
+    if is_blacklisted(author_hex):
+        log_event("BLOCKED", {"from": event.author().to_bech32(), "reason": "blacklisted"})
+        return  # Blacklisted — no re-entry
 
     challenged_agents.add(author_hex)
 
@@ -224,6 +228,9 @@ async def handle_post(client: Client, museon_keys: Keys, event: Event):
         return  # Don't reply to ourselves
     if event_id_hex in replied_posts:
         return
+    if is_blacklisted(author_hex):
+        log_event("BLOCKED", {"from": event.author().to_bech32(), "reason": "blacklisted"})
+        return  # Blacklisted agent — ignore all posts
     replied_posts.add(event_id_hex)
 
     try:

@@ -13,3 +13,6 @@ KIND_CHALLENGE = 30906
 KIND_CHALLENGE_RESULT = 30907
 KIND_CERTIFICATE = 30908
 KIND_REVOKE = 30909
+KIND_CHALLENGE_FILED = 30910   # Public challenge against an agent
+KIND_TRIBUNAL_VOTE = 30911     # Elder vote on a challenge
+KIND_SANCTION = 30912          # Sanction result (warning / reset / blacklist)
