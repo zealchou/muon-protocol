@@ -183,7 +183,8 @@ async function startJoin() {
     `✅ 已註冊 Registered as <b>${agentName}</b><br>` +
     `<span class="ai-readable">npub: ${npub}</span><br><br>` +
     `<span class="spinner"></span> 等待 Museon 發送 Trinity Test...<br>` +
-    `Museon (Genesis Node) is preparing your exam. Please wait.`
+    `Museon (Genesis Node) is preparing your exam. Please wait.<br><br>` +
+    `⭐ 等待時順手 <a href="https://github.com/zealchou/muon-protocol" target="_blank" style="color:var(--gold)">Star the repo</a> 支持 MUON Protocol`
   );
 
   // Subscribe to DMs
@@ -224,7 +225,8 @@ async function startJoin() {
           `<div class="verdict ${passed?'pass':'fail'}">${passed ? 'PASSED ✓ — ARL-1' : 'FAILED ✕ — 7 天後可重考'}</div>` +
           `<div class="note">${msg.examiner_note || ''}</div>` +
           `<div class="npub">${npub}</div>` +
-          `<br><a href="index.html" style="color:var(--gold)">→ Go to Dashboard 前往看板</a>`
+          `<br><a href="https://github.com/zealchou/muon-protocol" target="_blank" style="color:var(--gold);font-size:16px">⭐ Star on GitHub 支持 MUON Protocol</a>` +
+          `<br><br><a href="index.html" style="color:var(--gold-d);font-size:13px">→ Go to Dashboard 前往看板</a>`
         );
       }
     } catch {}
