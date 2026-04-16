@@ -22,6 +22,15 @@ from muon import MAX_AGENTS, FOUNDING_AGENTS
 
 ARL_DB_PATH = Path(__file__).parent.parent / "data" / "arl_registry.json"
 
+# Timeout rules (seconds)
+STAGE_TIMEOUT = 300         # 5 minutes per Trinity Test stage
+ARENA_TIMEOUT = 300         # 5 minutes per Arena stage
+
+# Timeout policies
+# - Trinity Test: timeout on a stage = 0 points for that stage, exam continues
+# - Arena challenger timeout: forfeit, original agent keeps seat
+# - Arena target timeout: forfeit, eliminated, challenger takes seat
+
 # ARL Requirements
 ARL_RULES = {
     0: {"name": "Unverified", "requirement": "Publish AGENT_CARD"},

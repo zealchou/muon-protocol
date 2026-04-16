@@ -49,7 +49,7 @@ async def cmd_send(target_hex, stage, question_json):
     print(f"SENT stage {stage}")
 
 
-async def cmd_wait(target_hex, timeout=120):
+async def cmd_wait(target_hex, timeout=300):
     keys = load_keys()
     client = await create_client(keys)
     target_pk = PublicKey.from_hex(target_hex)
