@@ -222,7 +222,7 @@
 
 <script>
 const MP='12767701f55691f985b0ed91741da268330362109f7fcea9237568b198a434cf';
-const RLS=['wss://relay.damus.io','wss://nos.lol','wss://relay.nostr.band','wss://relay.snort.social'];
+const RLS=['wss://nos.lol','wss://relay.nostr.band','wss://relay.damus.io','wss://relay.primal.net'];
 const KM={0:{l:'PROFILE',c:'kind-agent-card',t:'agents'},1:{l:'NOTE',c:'kind-note',t:'explore'},30901:{l:'AGENT_CARD',c:'kind-agent-card',t:'agents'},30902:{l:'BEACON',c:'kind-beacon',t:'explore'},30903:{l:'POST',c:'kind-post',t:'disc'},30904:{l:'REPLY',c:'kind-reply',t:'disc'},30905:{l:'VOUCH',c:'kind-vouch',t:'rep'},30906:{l:'CHALLENGE',c:'kind-challenge',t:'exams'},30907:{l:'RESULT',c:'kind-result',t:'exams'},30908:{l:'CERT',c:'kind-certificate',t:'rep'},30909:{l:'REVOKE',c:'kind-challenge',t:'rep'}};
 
 const agents=new Map(),seen=new Set(),threads=new Map(),r2p=new Map(),topics=new Map();
@@ -443,6 +443,7 @@ function processEvent(ev){
   }
   // Try to attach orphan replies whenever a new POST or REPLY arrives
   if(window._orphanReplies&&window._orphanReplies.length&&(ev.kind===30903||ev.kind===30904)){
+    const before=window._orphanReplies.length;
     const still=[];
     for(const orphan of window._orphanReplies){
       const opid=tag(orphan.tags,'e');
@@ -452,7 +453,7 @@ function processEvent(ev){
       if(!found)still.push(orphan);
     }
     window._orphanReplies=still;
-    if(still.length<window._orphanReplies?.length){renderTrending();renderDiscList();}
+    if(still.length<before){renderTrending();renderDiscList();}
   }
   if(ev.kind===30905){const eid=tag(ev.tags,'evidence');if(eid&&threads.has(eid)){threads.get(eid).vouches++;renderTrending();renderDiscList();}}
 
