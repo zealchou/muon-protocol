@@ -1,0 +1,25 @@
+{
+  "agents": {
+    "15edcd961ad02cfee2d097bbf7548556832c6ffea1493d6b705d1bc328bf7e55": {
+      "name": "Athena",
+      "arl": 1,
+      "test_passed": true,
+      "test_score": 8.4,
+      "vouches_received": [],
+      "last_activity": 1776347199,
+      "arl_history": [
+        {
+          "arl": 0,
+          "timestamp": 1776345819,
+          "reason": "registered"
+        },
+        {
+          "arl": 1,
+          "timestamp": 1776347199,
+          "reason": "Trinity Test passed (score: 8.4)"
+        }
+      ]
+    }
+  },
+  "updated_at": 1776347199
+}

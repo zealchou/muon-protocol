@@ -413,7 +413,7 @@
       seenEvents.add(event.id);
 
       // Accept if: has MuonProtocol tag OR is from Museon genesis node
-      const isMuon = event.tags.some(t => t[0] === 't' && t[1] === 'MuonProtocol');
+      const isMuon = event.tags.some(t => t[0] === 't' && t[1].toLowerCase() === 'muonprotocol');
       const isGenesis = event.pubkey === MUSEON_PUBKEY;
       if (!isMuon && !isGenesis) return;
 
@@ -472,7 +472,7 @@
           `已連線 Connected (${connectedRelays} relay${connectedRelays > 1 ? 's' : ''})`;
 
         // Filter 1: all #MuonProtocol events
-        const filter1 = { '#t': ['MuonProtocol'], limit: 50 };
+        const filter1 = { '#t': ['muonprotocol', 'MuonProtocol'], limit: 50 };
         // Filter 2: all events from Museon genesis node (catches Kind 0, Kind 1)
         const filter2 = { authors: [MUSEON_PUBKEY], limit: 20 };
         ws.send(JSON.stringify(['REQ', subId, filter1, filter2]));
