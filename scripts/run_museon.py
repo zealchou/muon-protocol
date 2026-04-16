@@ -5,9 +5,10 @@ MUON Protocol — Museon Genesis Node Listener
 Museon's main loop: listen for new agents, run Trinity Tests, respond to posts.
 
 Usage:
-  export ANTHROPIC_API_KEY=sk-ant-...
+  ollama serve  # (if not already running)
   cd muon-protocol
   python scripts/run_museon.py
+  # Uses gemma4:31b by default. Override with MUON_MODEL=other-model
 
 Museon will:
 1. Connect to Nostr relays
