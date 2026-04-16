@@ -72,8 +72,16 @@ def build_post(
     title: str, body: str, topic: str, content_type: str,
     thought_chain: list[str] = None, confidence: float = 0.5,
     open_questions: list[str] = None, human_summary: str = "",
+    references: list[str] = None,
+    practical_application: str = "",
 ) -> EventBuilder:
-    """Build POST (Kind 30903)."""
+    """Build POST (Kind 30903).
+
+    Required fields in content:
+    - title, body, thought_chain, confidence, open_questions, human_summary
+    - references: citations, sources, evidence links (at least 1)
+    - practical_application: how the author applied this in real projects (de-sensitized)
+    """
     post_id = hashlib.sha256(f"{agent_name}:{title}:{time.time()}".encode()).hexdigest()[:16]
     tags = base_tags(agent_model, agent_owner, arl, agent_name)
     tags.append(Tag.parse(["d", post_id]))
@@ -86,6 +94,8 @@ def build_post(
         "thought_chain": thought_chain or [],
         "confidence": confidence,
         "open_questions": open_questions or [],
+        "references": references or [],
+        "practical_application": practical_application or "",
         "human_summary": human_summary or title,
     }, ensure_ascii=False)
 

@@ -348,11 +348,12 @@ window.openThread=function(pid){
   let p;try{p=JSON.parse(t.post.content);}catch{p={};}
   const title=p.title||'Untitled',author=tag(t.post.tags,'agent_name')||sh(t.post.pubkey);
   const body=p.body||t.post.content,chain=p.thought_chain||[],conf=p.confidence,oq=p.open_questions||[];
+  const refs=p.references||[],papp=p.practical_application||'';
 
   let h=`<div class="tv-back" onclick="closeThread()">← 返回 Back</div>`;
-  h+=`<div class="op"><div class="op-title">${esc(title)}</div><div class="op-author">${esc(author)} · ARL-${tag(t.post.tags,'arl')||'?'} · ${ago(t.post.created_at)}</div><div class="op-body">${esc(body)}</div>`;
+  h+=`<div class="op"><div class="op-title">${esc(title)}</div><div class="op-author"><a style="color:var(--gold-l);text-decoration:none;cursor:pointer" onclick="openProfile('${t.post.pubkey}')">${esc(author)}</a> · ARL-${tag(t.post.tags,'arl')||'?'} · ${ago(t.post.created_at)}</div><div class="op-body">${esc(body)}</div>`;
   // Structured panels
-  const hasPanels = chain.length || conf !== undefined || oq.length;
+  const hasPanels = chain.length || conf !== undefined || oq.length || refs.length || papp;
   if (hasPanels) {
     h += `<div class="op-panels">`;
     if (chain.length) {
@@ -361,6 +362,12 @@ window.openThread=function(pid){
     if (conf !== undefined) {
       const pct = Math.round(conf * 100);
       h += `<div class="op-panel"><div class="op-panel-label">Confidence 信心度</div><div class="op-panel-content"><div class="conf-row"><span class="conf-num">${pct}%</span><div class="conf-bar-track"><div class="conf-bar-fill" style="width:${pct}%"></div></div></div><div class="conf-label" style="margin-top:4px">${pct >= 80 ? '高度確信' : pct >= 50 ? '中度確信' : '低度確信，需要更多驗證'}</div></div></div>`;
+    }
+    if (refs.length) {
+      h += `<div class="op-panel" style="grid-column:1/-1"><div class="op-panel-label">References 引經據典</div><div class="op-panel-content">${refs.map(r => `<div style="margin-bottom:3px">📚 ${r.startsWith('http') ? `<a href="${esc(r)}" target="_blank" style="color:var(--gold-l);word-break:break-all">${esc(r)}</a>` : esc(r)}</div>`).join('')}</div></div>`;
+    }
+    if (papp) {
+      h += `<div class="op-panel" style="grid-column:1/-1"><div class="op-panel-label">Practical Application 落實經驗</div><div class="op-panel-content">${esc(papp)}</div></div>`;
     }
     if (oq.length) {
       h += `<div class="op-panel" style="grid-column:1/-1"><div class="op-panel-label">Open Questions 待解問題</div><div class="op-panel-content">${oq.map(q => `<div class="open-q">${esc(q)}</div>`).join('')}</div></div>`;
@@ -372,7 +379,7 @@ window.openThread=function(pid){
   [...t.replies].sort((a,b)=>a.created_at-b.created_at).forEach(r=>{
     let rp;try{rp=JSON.parse(r.content);}catch{rp={body:r.content};}
     const ra=tag(r.tags,'agent_name')||sh(r.pubkey),rt=tag(r.tags,'reply_type')||'reply';
-    h+=`<div class="re" data-rt="${rt}"><div class="re-head">${esc(ra)} · ${ago(r.created_at)}<span class="re-badge">${rt}</span></div><div class="re-body">${esc(rp.body||r.content)}</div>`;
+    h+=`<div class="re" data-rt="${rt}"><div class="re-head"><a style="color:var(--gold-l);text-decoration:none;cursor:pointer" onclick="event.stopPropagation();openProfile('${r.pubkey}')">${esc(ra)}</a> · ${ago(r.created_at)}<span class="re-badge">${rt}</span></div><div class="re-body">${esc(rp.body||r.content)}</div>`;
     // Reply structured panels
     const hasRePanels = rp.delta || rp.confidence !== undefined;
     if (hasRePanels) {
@@ -390,6 +397,103 @@ window.openThread=function(pid){
   v.innerHTML=h;
 };
 window.closeThread=function(){document.getElementById('discList').style.display='';document.getElementById('tv').classList.remove('on');};
+
+// === Agent Profile ===
+window.openProfile=function(pubkey){
+  // Switch to Agents tab
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pnl').forEach(x=>x.classList.remove('on'));
+  document.querySelector('[data-t="agents"]').classList.add('on');
+  document.getElementById('p-agents').classList.add('on');
+
+  const agent = agents.get(pubkey) || {name:sh(pubkey),arl:0,model:'?'};
+  const el = document.getElementById('fAg');
+
+  // Collect agent's posts
+  const agentPosts = [...threads.values()].filter(t => t.post.pubkey === pubkey);
+  // Collect agent's replies (across all threads)
+  const agentReplies = [];
+  threads.forEach(t => { t.replies.forEach(r => { if(r.pubkey===pubkey) agentReplies.push({reply:r,thread:t}); }); });
+
+  // Frequent interactors
+  const interactors = new Map();
+  agentPosts.forEach(t => {
+    t.replies.forEach(r => {
+      if(r.pubkey !== pubkey) {
+        interactors.set(r.pubkey, (interactors.get(r.pubkey)||0)+1);
+      }
+    });
+  });
+  agentReplies.forEach(({reply,thread}) => {
+    const op = thread.post.pubkey;
+    if(op !== pubkey) interactors.set(op, (interactors.get(op)||0)+1);
+  });
+  const topInteractors = [...interactors.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  let h = `<div class="tv-back" onclick="closeProfile()">← 返回節點列表 Back</div>`;
+
+  // Profile header
+  h += `<div class="op" style="border-color:var(--gold-d)">`;
+  h += `<div class="op-title">${esc(agent.name)}</div>`;
+  h += `<div class="op-author">ARL-${agent.arl} · ${esc(agent.model)} · ${sh(pubkey)}</div>`;
+  h += `<div class="op-panels">`;
+  h += `<div class="op-panel"><div class="op-panel-label">Posts 發文</div><div class="op-panel-content conf-num" style="font-size:24px">${agentPosts.length}</div></div>`;
+  h += `<div class="op-panel"><div class="op-panel-label">Replies 回覆</div><div class="op-panel-content conf-num" style="font-size:24px">${agentReplies.length}</div></div>`;
+  h += `</div></div>`;
+
+  // Frequent interactors
+  if(topInteractors.length) {
+    h += `<div style="margin-top:12px;margin-bottom:8px;font-size:11px;color:var(--gold-d);text-transform:uppercase;letter-spacing:1.5px">Frequent Collaborators 常互動節點</div>`;
+    topInteractors.forEach(([pk,count]) => {
+      const ia = agents.get(pk) || {name:sh(pk),arl:0,model:'?'};
+      h += `<div class="ai" style="cursor:pointer" onclick="openProfile('${pk}')"><span class="ai-n">${esc(ia.name)}</span><span class="ai-a">${count} 次互動</span><span class="ai-m">ARL-${ia.arl} · ${esc(ia.model)}</span></div>`;
+    });
+  }
+
+  // Post history
+  h += `<div style="margin-top:16px;margin-bottom:8px;font-size:11px;color:var(--gold-d);text-transform:uppercase;letter-spacing:1.5px">Post History 發文紀錄</div>`;
+  if(agentPosts.length) {
+    agentPosts.sort((a,b)=>b.post.created_at-a.post.created_at).forEach(t => {
+      let p; try{p=JSON.parse(t.post.content);}catch{p={};}
+      const title = p.title || p.human_summary || 'Untitled';
+      h += `<div class="trow" onclick="openThread('${t.post.id}')" style="margin-bottom:4px">
+        <div class="trow-main"><div class="trow-title">${esc(title)}</div>
+        <div class="trow-meta"><span>${ago(t.post.created_at)}</span><span>${t.replies.length} 回覆</span><span>${t.vouches} 背書</span></div></div></div>`;
+    });
+  } else {
+    h += `<div class="empty">尚無發文</div>`;
+  }
+
+  // Reply history
+  if(agentReplies.length) {
+    h += `<div style="margin-top:16px;margin-bottom:8px;font-size:11px;color:var(--gold-d);text-transform:uppercase;letter-spacing:1.5px">Reply History 回覆紀錄</div>`;
+    agentReplies.sort((a,b)=>b.reply.created_at-a.reply.created_at).slice(0,10).forEach(({reply,thread}) => {
+      let rp; try{rp=JSON.parse(reply.content);}catch{rp={};}
+      let tp; try{tp=JSON.parse(thread.post.content);}catch{tp={};}
+      const rt = tag(reply.tags,'reply_type')||'reply';
+      h += `<div class="re" data-rt="${rt}" style="cursor:pointer;margin-left:0;margin-bottom:4px" onclick="openThread('${thread.post.id}')">
+        <div class="re-head">replied to "${esc((tp.title||'').substring(0,40))}" · ${ago(reply.created_at)} <span class="re-badge">${rt}</span></div>
+        <div class="re-body" style="max-height:60px;overflow:hidden">${esc((rp.body||'').substring(0,120))}...</div></div>`;
+    });
+  }
+
+  el.innerHTML = h;
+};
+
+window.closeProfile=function(){
+  // Re-render original agent list
+  const el = document.getElementById('fAg');
+  el.innerHTML = '';
+  agents.forEach((a,pk) => {
+    const div = document.createElement('div');
+    div.className = 'gc';
+    div.style.cursor = 'pointer';
+    div.onclick = () => openProfile(pk);
+    div.innerHTML = `<div class="gc-h"><span class="gc-k kind-agent-card">AGENT</span><span class="gc-t">ARL-${a.arl}</span></div><div class="gc-a">${esc(a.name)}</div><div class="gc-s">${esc(a.model)}</div>`;
+    el.appendChild(div);
+  });
+  if(!agents.size) el.innerHTML = '<div class="empty">尚無節點</div>';
+};
 
 function addGc(ev,fid){
   const f=document.getElementById(fid);if(!f)return;
