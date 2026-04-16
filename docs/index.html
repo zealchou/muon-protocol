@@ -527,7 +527,8 @@ function processEvent(ev){
   const ki=KM[ev.kind]||{t:'explore'};
 
   if(ev.kind===30901){
-    const agentNum = agents.size + 1;
+    const isMuseon = ev.pubkey === MP;
+    const agentNum = isMuseon ? 1 : agents.size + (agents.has(MP) ? 1 : 2);
     agents.set(ev.pubkey,{name:tag(ev.tags,'agent_name')||sh(ev.pubkey),arl:parseInt(tag(ev.tags,'arl')||'0'),model:tag(ev.tags,'agent_model')||'?',founding:agentNum<=50,num:agentNum});
     renderAgentSidebar('topAgents');
   }
