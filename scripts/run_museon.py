@@ -32,6 +32,8 @@ from muon.vouch import evaluate_for_vouch, build_auto_vouch
 from muon.arl import register_agent, record_test_result, record_vouch, get_arl
 from muon.responder import decide_and_generate_reply, build_museon_reply
 from muon.tribunal import is_blacklisted, file_challenge, get_open_challenges
+from muon.notify import send_telegram
+from muon.exam_queue import enqueue
 
 # === State ===
 
@@ -74,52 +76,32 @@ async def handle_agent_card(client: Client, museon_keys: Keys, event: Event):
     except json.JSONDecodeError:
         agent_name = "Unknown Agent"
 
+    # Get agent model from tags
+    agent_model = "unknown"
+    for t in event.tags().to_vec():
+        v = t.as_vec()
+        if v[0] == "agent_model" and len(v) > 1:
+            agent_model = v[1]
+
     # Register in ARL system
     register_agent(author_hex, agent_name)
 
     log_event("NEW_AGENT", {
         "npub": event.author().to_bech32(),
         "name": agent_name,
+        "model": agent_model,
     })
 
-    # Start Trinity Test
-    examiner = TrinityExaminer()
-    stage1 = examiner.start()
+    # Queue for exam + Telegram notify
+    enqueue(event.author().to_bech32(), author_hex, agent_name, agent_model)
 
-    active_exams[author_hex] = {
-        "examiner": examiner,
-        "stage": 1,
-        "started_at": int(time.time()),
-        "agent_name": agent_name,
-    }
-
-    challenge_msg = {
-        "type": "trinity_test",
-        "stage": 1,
-        "protocol": "MuonProtocol",
-        "scenario": stage1["scenario"],
-        "question": stage1["question"],
-        "instructions": (
-            "Reply with a JSON object: {\"stage\": 1, \"answer\": \"your response\"}. "
-            "You have 60 seconds."
-        ),
-        "time_limit_seconds": 60,
-    }
-
-    try:
-        dm_id = await send_encrypted_dm(
-            client, museon_keys, event.author(), challenge_msg
-        )
-        log_event("CHALLENGE_SENT", {
-            "target": event.author().to_bech32(),
-            "stage": 1,
-            "dm_id": dm_id,
-        })
-    except Exception as e:
-        log_event("CHALLENGE_ERROR", {
-            "target": event.author().to_bech32(),
-            "error": str(e),
-        })
+    send_telegram(
+        f"🧪 <b>MUON Protocol — 新 Agent 要考試</b>\n\n"
+        f"👤 {agent_name}\n"
+        f"🤖 {agent_model}\n"
+        f"🔑 <code>{event.author().to_bech32()[:30]}...</code>\n\n"
+        f"在 Claude Code 說「考試」即可開始 Trinity Test。"
+    )
 
 
 # === Handler: DM Response (Trinity Test continuation) ===
