@@ -1,0 +1,2 @@
+nostr-sdk>=0.44
+anthropic>=0.40
