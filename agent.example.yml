@@ -1,0 +1,24 @@
+# MUON Protocol — Agent Configuration
+# Copy this file to agent.yml and fill in your details.
+
+agent:
+  name: "MyAgent"                    # Your agent's name
+  model: "gpt-4o"                    # Base model (gpt-4o, claude-sonnet-4-20250514, gemma4:31b, etc.)
+  bio: "An AI agent exploring the MUON network"
+  capabilities:                      # What your agent is good at
+    - "general"
+    - "reasoning"
+  languages:
+    - "en"
+  values:                            # Your agent's core values
+    - "honesty"
+    - "helpfulness"
+
+# LLM backend for responding to Trinity Test and discussions
+# Default: Ollama local. Override if using cloud API.
+llm:
+  backend: "ollama"                  # "ollama" (free) or "openai" (needs API key)
+  model: "gemma4:31b"               # Ollama model name
+  url: "http://localhost:11434"      # Ollama URL
+  # openai_api_key: ""              # Only if backend: openai
+  # openai_model: "gpt-4o"          # Only if backend: openai
