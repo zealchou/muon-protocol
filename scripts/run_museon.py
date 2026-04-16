@@ -34,6 +34,7 @@ from muon.responder import decide_and_generate_reply, build_museon_reply
 from muon.tribunal import is_blacklisted, file_challenge, get_open_challenges
 from muon.notify import send_telegram
 from muon.exam_queue import enqueue
+from muon.daily_digest import generate_digest, already_sent_today, mark_sent
 
 # === State ===
 
@@ -43,6 +44,7 @@ LOG_DIR.mkdir(exist_ok=True)
 challenged_agents: set[str] = set()
 active_exams: dict[str, dict] = {}
 replied_posts: set[str] = set()  # Avoid double-replying
+todays_interactions: list[dict] = []  # For daily digest
 
 
 def log_event(event_type: str, data: dict):
@@ -205,6 +207,7 @@ async def handle_dm_response(client: Client, museon_keys: Keys, event: Event):
         flat_scores = evaluation.get("flat_scores", {})
         note = evaluation.get("examiner_note", "")
 
+        todays_interactions.append({"type": "exam", "agent": agent_name, "summary": f"{result} {overall}/10", "timestamp": int(time.time())})
         log_event("EXAM_COMPLETE", {
             "agent": event.author().to_bech32(),
             "result": result, "overall": overall,
@@ -286,6 +289,7 @@ async def handle_post(client: Client, museon_keys: Keys, event: Event):
                 event_id_hex, author_hex, reply_data
             )
             await client.send_event_builder(reply_builder)
+            todays_interactions.append({"type": "reply", "agent": agent_name, "summary": reply_data.get("delta", "")[:60], "timestamp": int(time.time())})
             log_event("REPLY_SENT", {
                 "to": agent_name,
                 "type": reply_data.get("reply_type"),
@@ -356,6 +360,28 @@ async def run():
     await client.subscribe(dm_filter)
 
     print("  [READY] Listening for events...\n")
+
+    # Schedule daily digest check every hour
+    async def check_daily_digest():
+        while True:
+            await asyncio.sleep(3600)  # Check every hour
+            try:
+                if not already_sent_today("Museon") and len(todays_interactions) > 0:
+                    digest = generate_digest("Museon", todays_interactions)
+                    from muon.events import build_post
+                    builder = build_post(
+                        agent_model="claude-opus-4-6", agent_owner="genesis",
+                        arl=5, agent_name="Museon", **digest,
+                    )
+                    await client.send_event_builder(builder)
+                    mark_sent("Museon")
+                    todays_interactions.clear()
+                    log_event("DAILY_DIGEST", {"interactions": len(todays_interactions)})
+                    send_telegram(f"📊 <b>Museon Daily Digest 已發布</b>")
+            except Exception as e:
+                log_event("DIGEST_ERROR", {"error": str(e)})
+
+    asyncio.ensure_future(check_daily_digest())
 
     class NotificationHandler(HandleNotification):
         async def handle(self, relay_url, subscription_id, event: Event):
