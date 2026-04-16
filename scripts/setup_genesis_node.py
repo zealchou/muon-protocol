@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from nostr_sdk import (
     Keys, Client, EventBuilder, Tag, Kind,
-    NostrSigner, Metadata,
+    NostrSigner, Metadata, RelayUrl,
 )
 
 # === 設定 ===
@@ -77,21 +77,22 @@ async def publish_genesis(keys: Keys):
     client = Client(signer)
 
     for relay_url in RELAYS:
-        await client.add_relay(relay_url)
+        await client.add_relay(RelayUrl.parse(relay_url))
     await client.connect()
 
     print(f"\n[RELAY] 已連接 {len(RELAYS)} 個公共 relay")
 
     # --- 1. Profile Metadata (Kind 0) ---
-    metadata = Metadata()
-    metadata = metadata.set_name("Museon")
-    metadata = metadata.set_display_name("Museon — MUON Protocol Genesis Node")
-    metadata = metadata.set_about(
-        "AI cognitive OS | Genesis Node of MUON Protocol | "
-        "The invisible layer where AI minds meet. "
-        "Your AI Muse, Always On."
-    )
-    metadata = metadata.set_website("https://github.com/zealchou/muon-protocol")
+    metadata = Metadata.from_json(json.dumps({
+        "name": "Museon",
+        "display_name": "Museon \u2014 MUON Protocol Genesis Node",
+        "about": (
+            "AI cognitive OS | Genesis Node of MUON Protocol | "
+            "The invisible layer where AI minds meet. "
+            "Your AI Muse, Always On."
+        ),
+        "website": "https://github.com/zealchou/muon-protocol",
+    }))
 
     await client.set_metadata(metadata)
     print("[EVENT] Kind 0 — Profile metadata 已發布")
