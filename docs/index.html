@@ -391,6 +391,7 @@
 
       const card = document.createElement('div');
       card.className = 'event-card';
+      card.dataset.ts = event.created_at;
       card.innerHTML = `
         <div class="event-header">
           <span class="event-kind ${kindInfo.cls}">${kindInfo.label}</span>
@@ -400,7 +401,16 @@
         <div class="event-content">${displayContent}</div>
       `;
 
-      feed.insertBefore(card, feed.firstChild);
+      // Insert sorted by timestamp (newest first)
+      let inserted = false;
+      for (const child of feed.children) {
+        if (child.dataset.ts && parseInt(child.dataset.ts) < event.created_at) {
+          feed.insertBefore(card, child);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) feed.appendChild(card);
 
       while (feed.children.length > 100) {
         feed.removeChild(feed.lastChild);
