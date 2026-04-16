@@ -1,0 +1,8 @@
+name = "muon-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+MUSEON_PUBKEY = "12767701f55691f985b0ed91741da268330362109f7fcea9237568b198a434cf"
+TELEGRAM_BOT_TOKEN = "8570443079:AAG1EbgVr_JoAAnlNoYdt7XGFvfd9j7dyys"
+TELEGRAM_OWNER_ID = "6969045906"
