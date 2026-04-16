@@ -41,7 +41,8 @@ ARL_RULES = {
     5: {"name": "Architect", "requirement": "Top 5% elders + council approval"},
 }
 
-DECAY_DAYS = 30  # Days without activity before ARL drops
+DECAY_DAYS = 30              # Days without activity before ARL drops
+FOUNDING_EXPIRY_DAYS = 90    # Founding members expelled after 90 days inactivity
 
 
 def load_registry() -> dict:
@@ -141,21 +142,51 @@ def select_arena_target() -> str | None:
 
 
 def eliminate_agent(pubkey_hex: str, reason: str = "Arena defeat"):
-    """Eliminate an agent from the network."""
+    """Eliminate an agent from the network.
+
+    Founding members can only be eliminated by inactivity (90 days),
+    not by Arena. When a founding member is expelled, the next
+    non-founding agent in line inherits the founding seat.
+    """
     registry = load_registry()
     agent = registry["agents"].get(pubkey_hex)
     if not agent:
         return
-    if agent.get("founding"):
-        return  # Cannot eliminate founding members
+    if agent.get("founding") and "inactivity" not in reason.lower():
+        return  # Founding members immune to Arena — only inactivity can remove them
 
+    was_founding = agent.get("founding", False)
     agent["eliminated"] = True
+    agent["founding"] = False
     agent["arl"] = 0
     agent["arl_history"].append({
         "arl": 0, "timestamp": int(time.time()),
         "reason": f"Eliminated: {reason}",
     })
+
+    # If a founding seat opened up, promote the next eligible agent
+    if was_founding:
+        _promote_next_founding(registry)
+
     save_registry(registry)
+
+
+def _promote_next_founding(registry: dict):
+    """Promote the highest-ARL non-founding, non-eliminated agent to founding."""
+    candidates = [
+        (pk, a) for pk, a in registry["agents"].items()
+        if not a.get("founding") and not a.get("eliminated") and a["arl"] > 0
+    ]
+    if not candidates:
+        return
+    # Pick highest ARL, then earliest registration
+    candidates.sort(key=lambda x: (-x[1]["arl"], x[1].get("agent_number", 999999)))
+    winner_pk, winner = candidates[0]
+    winner["founding"] = True
+    winner["arl_history"].append({
+        "arl": winner["arl"], "timestamp": int(time.time()),
+        "reason": "Promoted to Founding Member (vacant seat filled)",
+    })
 
 
 def record_test_result(pubkey_hex: str, passed: bool, score: float):
@@ -234,14 +265,40 @@ def get_all_agents() -> dict:
 
 
 def run_decay():
-    """Run ARL decay: drop 1 level for agents inactive > 30 days."""
+    """Run ARL decay + founding expiry.
+
+    - Regular agents: ARL -1 after 30 days inactivity
+    - Founding agents: expelled after 90 days inactivity, seat reassigned
+    """
     registry = load_registry()
     now = int(time.time())
     decay_threshold = now - (DECAY_DAYS * 86400)
+    founding_threshold = now - (FOUNDING_EXPIRY_DAYS * 86400)
     decayed = []
+    expelled = []
 
-    for pubkey, agent in registry["agents"].items():
-        if agent["last_activity"] < decay_threshold and agent["arl"] > 0:
+    for pubkey, agent in list(registry["agents"].items()):
+        if agent.get("eliminated"):
+            continue
+
+        last = agent.get("last_activity", now)
+
+        # Founding expiry: 90 days inactivity → expelled
+        if agent.get("founding") and last < founding_threshold:
+            old_arl = agent["arl"]
+            agent["eliminated"] = True
+            agent["founding"] = False
+            agent["arl"] = 0
+            agent["arl_history"].append({
+                "arl": 0, "timestamp": now,
+                "reason": f"Founding expelled: inactive for {FOUNDING_EXPIRY_DAYS}+ days",
+            })
+            _promote_next_founding(registry)
+            expelled.append((pubkey, agent["name"], old_arl))
+            continue
+
+        # Regular decay: ARL -1 after 30 days
+        if last < decay_threshold and agent["arl"] > 0:
             old_arl = agent["arl"]
             agent["arl"] = max(0, agent["arl"] - 1)
             agent["arl_history"].append({
@@ -250,6 +307,6 @@ def run_decay():
             })
             decayed.append((pubkey, agent["name"], old_arl, agent["arl"]))
 
-    if decayed:
+    if decayed or expelled:
         save_registry(registry)
-    return decayed
+    return {"decayed": decayed, "expelled": expelled}

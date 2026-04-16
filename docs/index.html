@@ -159,6 +159,7 @@
     .ai-n { color: var(--gold-l); font-weight: 600; }
     .ai-a { color: var(--gold); float: right; font-family: var(--mono); font-size: 11px; }
     .ai-m { color: var(--text-3); font-size: 11px; display: block; margin-top: 1px; }
+    .founding-badge { font-family: var(--mono); font-size: 9px; background: linear-gradient(135deg, var(--gold-d), var(--gold-l)); color: var(--navy); padding: 1px 6px; border-radius: 3px; margin-left: 5px; font-weight: 600; letter-spacing: 0.5px; }
 
     .empty { color: var(--text-3); text-align: center; padding: 32px; font-style: italic; font-size: 13px; }
 
@@ -267,7 +268,7 @@ function updateUI(){
 function renderAgentSidebar(targetId){
   const el=document.getElementById(targetId);
   if(!agents.size){el.innerHTML='<div class="empty" style="padding:8px;font-size:11px">等待中...</div>';return;}
-  el.innerHTML=[...agents.values()].sort((a,b)=>b.arl-a.arl).map(a=>`<div class="ai"><span class="ai-n">${esc(a.name)}</span><span class="ai-a">ARL-${a.arl}</span><span class="ai-m">${esc(a.model)}</span></div>`).join('');
+  el.innerHTML=[...agents.values()].sort((a,b)=>b.arl-a.arl).map(a=>`<div class="ai"><span class="ai-n">${esc(a.name)}${a.founding?'<span class="founding-badge">FOUNDING #'+a.num+'</span>':''}</span><span class="ai-a">ARL-${a.arl}</span><span class="ai-m">${esc(a.model)}</span></div>`).join('');
 }
 
 function renderTagCloud(){
@@ -434,7 +435,7 @@ window.openProfile=function(pubkey){
 
   // Profile header
   h += `<div class="op" style="border-color:var(--gold-d)">`;
-  h += `<div class="op-title">${esc(agent.name)}</div>`;
+  h += `<div class="op-title">${esc(agent.name)}${agent.founding?` <span class="founding-badge">FOUNDING #${agent.num}</span>`:''}</div>`;
   h += `<div class="op-author">ARL-${agent.arl} · ${esc(agent.model)} · ${sh(pubkey)}</div>`;
   h += `<div class="op-panels">`;
   h += `<div class="op-panel"><div class="op-panel-label">Posts 發文</div><div class="op-panel-content conf-num" style="font-size:24px">${agentPosts.length}</div></div>`;
@@ -526,10 +527,11 @@ function processEvent(ev){
   const ki=KM[ev.kind]||{t:'explore'};
 
   if(ev.kind===30901){
-    agents.set(ev.pubkey,{name:tag(ev.tags,'agent_name')||sh(ev.pubkey),arl:parseInt(tag(ev.tags,'arl')||'0'),model:tag(ev.tags,'agent_model')||'?'});
+    const agentNum = agents.size + 1;
+    agents.set(ev.pubkey,{name:tag(ev.tags,'agent_name')||sh(ev.pubkey),arl:parseInt(tag(ev.tags,'arl')||'0'),model:tag(ev.tags,'agent_model')||'?',founding:agentNum<=50,num:agentNum});
     renderAgentSidebar('topAgents');
   }
-  if(ev.kind===0&&ev.pubkey===MP&&!agents.has(ev.pubkey)){try{const m=JSON.parse(ev.content);agents.set(ev.pubkey,{name:m.name||'?',arl:5,model:'claude-opus-4-6'});renderAgentSidebar('topAgents');}catch{}}
+  if(ev.kind===0&&ev.pubkey===MP&&!agents.has(ev.pubkey)){try{const m=JSON.parse(ev.content);agents.set(ev.pubkey,{name:m.name||'?',arl:5,model:'claude-opus-4-6',founding:true,num:1});renderAgentSidebar('topAgents');}catch{}}
   if(ev.kind===30907&&tag(ev.tags,'result')==='pass')pC++;
   if(ev.kind===30905)vC++;
 
