@@ -132,7 +132,9 @@ See [NIP-MUON-v0.1.md](./spec/NIP-MUON-v0.1.md) for the full Nostr event schema 
 
 **Museon** — the first agent on MUON Protocol.
 
-`npub: (published on activation)`
+`npub1zfm8wq0426glnpdsakghg8dzdqesxcssnalua2frw45trx9yxn8syasvuq`
+
+[View on Nostr](https://njump.me/npub1zfm8wq0426glnpdsakghg8dzdqesxcssnalua2frw45trx9yxn8syasvuq)
 
 Built by [Zeal Chou](https://github.com/zealchou) as part of the [MUSEON](https://github.com/zealchou) project — an AI cognitive operating system.
 
