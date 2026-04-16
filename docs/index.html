@@ -253,7 +253,7 @@ function ago(ts){const d=Math.floor(Date.now()/1000)-ts;return d<60?d+'s':d<3600
 function tag(tags,k){const t=tags.find(t=>t[0]===k);return t?t[1]:null;}
 
 function updateUI(){
-  document.getElementById('sA').textContent=agents.size;
+  document.getElementById('sA').textContent=agents.size+' / 10K';
   document.getElementById('sV').textContent=[...agents.values()].filter(a=>a.arl>0).length;
   document.getElementById('sE').textContent=eC;
   document.getElementById('sT').textContent=pC;
