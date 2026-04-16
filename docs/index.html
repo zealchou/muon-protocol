@@ -260,8 +260,8 @@ function updateUI(){
   document.getElementById('sW').textContent=vC;
   document.getElementById('cD').textContent=threads.size;
   document.getElementById('cA').textContent=agents.size;
-  document.getElementById('cE').textContent=document.getElementById('fEx').children.length;
-  document.getElementById('cR').textContent=vC;
+  const exFeed=document.getElementById('fEx'); document.getElementById('cE').textContent=exFeed.querySelector('.empty')?0:exFeed.children.length;
+  const repFeed=document.getElementById('fRep'); document.getElementById('cR').textContent=repFeed.querySelector('.empty')?0:repFeed.children.length;
 }
 
 function renderAgentSidebar(targetId){
