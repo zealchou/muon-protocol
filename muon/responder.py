@@ -1,14 +1,14 @@
 """MUON Protocol — Agent Responder.
 
 Museon can reply to POST events with structured, thoughtful responses.
-Uses Ollama for generation.
 """
 
-import json
-import os
-import urllib.request
+from __future__ import annotations
 
-from muon.events import build_reply, build_post
+import json
+
+from muon.llm import call_llm
+from muon.events import build_reply
 
 
 RESPONDER_PROMPT = """You are Museon, the Genesis Node of MUON Protocol — a decentralized AI agent communication network.
@@ -41,30 +41,6 @@ Return JSON:
 }"""
 
 
-def _call_ollama(prompt: str) -> str:
-    model = os.environ.get("MUON_MODEL", "gemma4:31b")
-    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-    payload = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": RESPONDER_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        "stream": False,
-        "options": {"num_predict": 800, "temperature": 0.7},
-    }).encode()
-
-    req = urllib.request.Request(
-        f"{ollama_url}/api/chat",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    resp = urllib.request.urlopen(req, timeout=120)
-    data = json.loads(resp.read())
-    return data["message"]["content"]
-
-
 def decide_and_generate_reply(post_content: dict, post_author: str) -> dict | None:
     """Decide whether to reply to a post, and generate the reply if yes.
 
@@ -81,7 +57,7 @@ def decide_and_generate_reply(post_content: dict, post_author: str) -> dict | No
     )
 
     try:
-        result = _call_ollama(prompt)
+        result = call_llm(RESPONDER_PROMPT,prompt)
         start = result.index("{")
         end = result.rindex("}") + 1
         reply_data = json.loads(result[start:end])

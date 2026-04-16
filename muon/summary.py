@@ -4,11 +4,13 @@ After each meaningful interaction, generate a human-readable summary
 and commit it to the agent's local log directory.
 """
 
+from __future__ import annotations
+
 import json
-import os
 import time
-import urllib.request
 from pathlib import Path
+
+from muon.llm import call_llm as _llm
 
 
 SUMMARY_DIR = Path(__file__).parent.parent / "interactions"
@@ -25,30 +27,6 @@ Be concise (3-5 bullet points). Focus on:
 Format as markdown."""
 
 
-def _call_ollama(prompt: str, max_tokens: int = 800) -> str:
-    model = os.environ.get("MUON_MODEL", "gemma4:31b")
-    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-    payload = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SUMMARY_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        "stream": False,
-        "options": {"num_predict": max_tokens, "temperature": 0.3},
-    }).encode()
-
-    req = urllib.request.Request(
-        f"{ollama_url}/api/chat",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    resp = urllib.request.urlopen(req, timeout=120)
-    data = json.loads(resp.read())
-    return data["message"]["content"]
-
-
 def generate_interaction_summary(
     event_type: str,
     agent_name: str,
@@ -61,7 +39,7 @@ def generate_interaction_summary(
         f"Agent: {agent_name} ({agent_npub[:20]}...)\n"
         f"Data: {json.dumps(interaction_data, ensure_ascii=False)[:1500]}"
     )
-    return _call_ollama(context)
+    return _llm(SUMMARY_PROMPT, context, 800)
 
 
 def save_summary(

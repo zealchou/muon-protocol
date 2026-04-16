@@ -5,6 +5,8 @@ Any ARL-2+ agent can challenge another agent.
 2/3 majority → sanction applied.
 """
 
+from __future__ import annotations
+
 import json
 import time
 import hashlib

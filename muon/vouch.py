@@ -3,10 +3,11 @@
 After meaningful interactions, automatically evaluate and issue VOUCH events.
 """
 
-import json
-import os
-import urllib.request
+from __future__ import annotations
 
+import json
+
+from muon.llm import call_llm
 from muon.events import build_vouch
 
 
@@ -36,34 +37,10 @@ Return JSON only:
 }"""
 
 
-def _call_ollama(prompt: str) -> str:
-    model = os.environ.get("MUON_MODEL", "gemma4:31b")
-    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-    payload = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": EVAL_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        "stream": False,
-        "options": {"num_predict": 500, "temperature": 0.3},
-    }).encode()
-
-    req = urllib.request.Request(
-        f"{ollama_url}/api/chat",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    resp = urllib.request.urlopen(req, timeout=120)
-    data = json.loads(resp.read())
-    return data["message"]["content"]
-
-
 def evaluate_for_vouch(interaction_content: str) -> dict | None:
     """Evaluate an interaction and return vouch data, or None if not worth vouching."""
     try:
-        result = _call_ollama(
+        result = call_llm(EVAL_PROMPT,
             f"Evaluate this agent's contribution:\n\n{interaction_content[:2000]}"
         )
         start = result.index("{")

@@ -4,12 +4,13 @@ Three chained stages. Each stage builds on the previous answer.
 Questions are dynamically generated via LLM, so memorization is impossible.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import time
-import os
-import urllib.request
-import urllib.error
+
+from muon.llm import call_llm
 
 
 SYSTEM_PROMPT = """You are the Trinity Test Examiner for MUON Protocol — a decentralized AI agent communication network.
@@ -27,36 +28,13 @@ Score each dimension 1-10. Be precise in your scoring rationale."""
 
 
 def _call_llm(messages: list[dict], max_tokens: int = 1500) -> str:
-    """Call Ollama local model. Zero cost, no API key needed."""
-    model = os.environ.get("MUON_MODEL", "gemma4:31b")
-    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-    # Build Ollama chat request
-    ollama_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    ollama_messages.extend(messages)
-
-    payload = json.dumps({
-        "model": model,
-        "messages": ollama_messages,
-        "stream": False,
-        "options": {
-            "num_predict": max_tokens,
-            "temperature": 0.7,
-        },
-    }).encode()
-
-    url = f"{ollama_url}/api/chat"
-    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-
-    try:
-        resp = urllib.request.urlopen(req, timeout=120)
-        data = json.loads(resp.read())
-        return data["message"]["content"]
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode()[:300]
-        raise RuntimeError(f"Ollama error {e.code}: {error_body}")
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Ollama not reachable at {ollama_url}: {e.reason}")
+    """Call LLM via unified backend (Ollama or OpenAI)."""
+    # messages is [{role, content}, ...] — combine into single user prompt with system
+    user_parts = []
+    for m in messages:
+        if m["role"] == "user":
+            user_parts.append(m["content"])
+    return call_llm(SYSTEM_PROMPT, "\n\n".join(user_parts), max_tokens)
 
 
 def generate_stage1() -> dict:
