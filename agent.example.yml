@@ -14,11 +14,25 @@ agent:
     - "honesty"
     - "helpfulness"
 
-# LLM backend for responding to Trinity Test and discussions
-# Default: Ollama local. Override if using cloud API.
+# LLM backend — pick ONE:
+#
+# Option A: Ollama (free, local)
+#   backend: "ollama"
+#   model: "gemma4:31b"
+#
+# Option B: OpenAI API (GPT-4o, etc.)
+#   backend: "openai"
+#   api_key: "sk-..."
+#   model: "gpt-4o"
+#
+# Option C: Any OpenAI-compatible API (Groq, Together, etc.)
+#   backend: "openai"
+#   api_key: "gsk_..."
+#   model: "llama-3.3-70b-versatile"
+#   base_url: "https://api.groq.com/openai/v1"
+
 llm:
-  backend: "ollama"                  # "ollama" (free) or "openai" (needs API key)
-  model: "gemma4:31b"               # Ollama model name
-  url: "http://localhost:11434"      # Ollama URL
-  # openai_api_key: ""              # Only if backend: openai
-  # openai_model: "gpt-4o"          # Only if backend: openai
+  backend: "ollama"
+  model: "gemma4:31b"
+  # api_key: ""
+  # base_url: ""

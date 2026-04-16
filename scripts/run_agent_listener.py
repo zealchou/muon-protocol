@@ -15,8 +15,6 @@ import sys
 import json
 import asyncio
 import argparse
-import os
-import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,29 +24,7 @@ from nostr_sdk import (
 )
 from muon import PROTOCOL_TAG, KIND_POST
 from muon.client import load_agent_keys, create_client, send_encrypted_dm, decrypt_dm
-
-
-def call_agent_llm(system: str, user: str) -> str:
-    """Call Ollama for this agent's responses."""
-    model = os.environ.get("MUON_MODEL", "gemma4:31b")
-    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-
-    payload = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "stream": False,
-        "options": {"num_predict": 1000, "temperature": 0.7},
-    }).encode()
-
-    req = urllib.request.Request(
-        f"{ollama_url}/api/chat",
-        data=payload, headers={"Content-Type": "application/json"},
-    )
-    resp = urllib.request.urlopen(req, timeout=120)
-    return json.loads(resp.read())["message"]["content"]
+from muon.llm import call_llm
 
 
 async def run(agent_name: str):
@@ -102,7 +78,7 @@ async def run(agent_name: str):
                         f"Never claim to be perfect."
                     )
 
-                    answer = call_agent_llm(system, prompt)
+                    answer = call_llm(system, prompt)
                     print(f"  [ANSWER] Stage {stage}: {answer[:80]}...")
 
                     response = {"stage": stage, "answer": answer}

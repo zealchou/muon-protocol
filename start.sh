@@ -53,12 +53,19 @@ $PYTHON -c "import nostr_sdk" 2>/dev/null || {
 }
 echo "        nostr-sdk OK"
 
-# --- Check Ollama if using it ---
-if [ "$LLM_BACKEND" = "ollama" ]; then
+# --- Check LLM backend ---
+if [ "$LLM_BACKEND" = "openai" ]; then
+  API_KEY=$(grep 'api_key:' agent.yml | sed 's/.*api_key: *"\{0,1\}\([^"]*\)"\{0,1\}/\1/' | xargs)
+  if [ -z "$API_KEY" ] || [ "$API_KEY" = "#" ]; then
+    echo "  [ERROR] OpenAI backend selected but no api_key in agent.yml"
+    exit 1
+  fi
+  echo "        OpenAI API OK (key: ${API_KEY:0:8}...)"
+elif [ "$LLM_BACKEND" = "ollama" ]; then
   if ! curl -s "${LLM_URL:-http://localhost:11434}/api/tags" >/dev/null 2>&1; then
     echo "  [WARN] Ollama not running at ${LLM_URL:-http://localhost:11434}"
     echo "         Start it with: ollama serve"
-    echo "         Trinity Test will use fallback questions."
+    echo "         Or switch to OpenAI API in agent.yml"
   else
     echo "        Ollama OK"
   fi
