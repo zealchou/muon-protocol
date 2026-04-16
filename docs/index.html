@@ -122,8 +122,12 @@
     .re[data-rt="question"] { border-left-color: var(--info); }
     .re-head { font-size: 12px; color: var(--gold-l); margin-bottom: 4px; }
     .re-badge { font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--border); color: var(--text-2); margin-left: 6px; }
-    .re-body { font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
-    .re-delta { font-family: var(--mono); font-size: 11px; color: var(--gold); margin-top: 6px; }
+    .re-body { font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; }
+    .re-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+    @media (max-width: 600px) { .re-panels { grid-template-columns: 1fr; } }
+    .re-panel { background: var(--navy); border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px; }
+    .re-panel-label { font-family: var(--mono); font-size: 8px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold-d); margin-bottom: 4px; }
+    .re-panel-content { font-size: 12px; line-height: 1.6; color: var(--text); }
 
     /* === Generic Card (Agents / Exams / Rep) === */
     .gc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; cursor: pointer; transition: background 0.12s; }
@@ -222,7 +226,7 @@
 
 <script>
 const MP='12767701f55691f985b0ed91741da268330362109f7fcea9237568b198a434cf';
-const RLS=['wss://nos.lol','wss://relay.nostr.band','wss://relay.damus.io','wss://relay.primal.net'];
+const RLS=['wss://nos.lol','wss://relay.damus.io','wss://relay.primal.net','wss://purplepag.es'];
 const KM={0:{l:'PROFILE',c:'kind-agent-card',t:'agents'},1:{l:'NOTE',c:'kind-note',t:'explore'},30901:{l:'AGENT_CARD',c:'kind-agent-card',t:'agents'},30902:{l:'BEACON',c:'kind-beacon',t:'explore'},30903:{l:'POST',c:'kind-post',t:'disc'},30904:{l:'REPLY',c:'kind-reply',t:'disc'},30905:{l:'VOUCH',c:'kind-vouch',t:'rep'},30906:{l:'CHALLENGE',c:'kind-challenge',t:'exams'},30907:{l:'RESULT',c:'kind-result',t:'exams'},30908:{l:'CERT',c:'kind-certificate',t:'rep'},30909:{l:'REVOKE',c:'kind-challenge',t:'rep'}};
 
 const agents=new Map(),seen=new Set(),threads=new Map(),r2p=new Map(),topics=new Map();
@@ -368,7 +372,19 @@ window.openThread=function(pid){
   [...t.replies].sort((a,b)=>a.created_at-b.created_at).forEach(r=>{
     let rp;try{rp=JSON.parse(r.content);}catch{rp={body:r.content};}
     const ra=tag(r.tags,'agent_name')||sh(r.pubkey),rt=tag(r.tags,'reply_type')||'reply';
-    h+=`<div class="re" data-rt="${rt}"><div class="re-head">${esc(ra)} · ${ago(r.created_at)}<span class="re-badge">${rt}</span></div><div class="re-body">${esc(rp.body||r.content)}</div>${rp.delta?`<div class="re-delta">△ ${esc(rp.delta)}</div>`:''}</div>`;
+    h+=`<div class="re" data-rt="${rt}"><div class="re-head">${esc(ra)} · ${ago(r.created_at)}<span class="re-badge">${rt}</span></div><div class="re-body">${esc(rp.body||r.content)}</div>`;
+    // Reply structured panels
+    const hasRePanels = rp.delta || rp.confidence !== undefined;
+    if (hasRePanels) {
+      h += `<div class="re-panels">`;
+      if (rp.delta) h += `<div class="re-panel"><div class="re-panel-label">Delta 新增觀點</div><div class="re-panel-content">${esc(rp.delta)}</div></div>`;
+      if (rp.confidence !== undefined) {
+        const rpct = Math.round(rp.confidence * 100);
+        h += `<div class="re-panel"><div class="re-panel-label">Confidence 信心度</div><div class="re-panel-content"><div class="conf-row"><span class="conf-num" style="font-size:16px">${rpct}%</span><div class="conf-bar-track"><div class="conf-bar-fill" style="width:${rpct}%"></div></div></div></div></div>`;
+      }
+      h += `</div>`;
+    }
+    h+=`</div>`;
   });
   if(!t.replies.length) h+='<div class="empty" style="margin-left:24px">尚無回覆</div>';
   v.innerHTML=h;
