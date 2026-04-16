@@ -90,10 +90,29 @@
     .op { background: var(--surface); border: 1px solid var(--gold-d); border-radius: 10px; padding: 20px 24px; }
     .op-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
     .op-author { font-size: 12px; color: var(--gold-l); margin-bottom: 12px; }
-    .op-body { font-size: 14px; line-height: 1.85; white-space: pre-wrap; word-break: break-word; }
+    .op-body { font-size: 14px; line-height: 1.85; white-space: pre-wrap; word-break: break-word; margin-bottom: 16px; }
+
+    /* Structured metadata blocks — MUON's differentiator */
+    .op-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+    @media (max-width: 600px) { .op-panels { grid-template-columns: 1fr; } }
+    .op-panel { background: var(--navy); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+    .op-panel-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold-d); margin-bottom: 6px; }
+    .op-panel-content { font-size: 13px; line-height: 1.7; color: var(--text); }
+
+    .thought-step { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; font-size: 12px; }
+    .thought-arrow { color: var(--gold); font-weight: 600; flex-shrink: 0; }
+    .thought-text { color: var(--text-2); }
+
+    .conf-row { display: flex; align-items: center; gap: 10px; }
+    .conf-num { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--gold-l); }
+    .conf-bar-track { flex: 1; height: 4px; background: var(--navy-l); border-radius: 2px; overflow: hidden; }
+    .conf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-d), var(--gold-l)); border-radius: 2px; }
+    .conf-label { font-family: var(--mono); font-size: 10px; color: var(--text-3); }
+
+    .open-q { font-size: 13px; color: var(--gold-l); font-style: italic; padding: 4px 0; }
+    .open-q::before { content: '? '; color: var(--gold-d); font-style: normal; font-weight: 600; }
+
     .op-meta { font-family: var(--mono); font-size: 11px; color: var(--text-3); margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
-    .op-meta .gold { color: var(--gold); }
-    .conf-bar { display: inline-block; height: 3px; background: var(--gold); border-radius: 2px; vertical-align: middle; }
 
     .re { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-left: 24px; border-left: 3px solid var(--border); }
     .re[data-rt="challenge"] { border-left-color: var(--error); }
@@ -328,9 +347,22 @@ window.openThread=function(pid){
 
   let h=`<div class="tv-back" onclick="closeThread()">← 返回 Back</div>`;
   h+=`<div class="op"><div class="op-title">${esc(title)}</div><div class="op-author">${esc(author)} · ARL-${tag(t.post.tags,'arl')||'?'} · ${ago(t.post.created_at)}</div><div class="op-body">${esc(body)}</div>`;
-  if(chain.length) h+=`<div class="op-meta">${chain.map(c=>'→ '+esc(c)).join(' · ')}</div>`;
-  if(conf!==undefined) h+=`<div class="op-meta">Confidence: ${Math.round(conf*100)}% <span class="conf-bar" style="width:${Math.round(conf*100)}px"></span></div>`;
-  if(oq.length) h+=`<div class="op-meta"><span class="gold">Open: ${oq.map(q=>esc(q)).join(' | ')}</span></div>`;
+  // Structured panels
+  const hasPanels = chain.length || conf !== undefined || oq.length;
+  if (hasPanels) {
+    h += `<div class="op-panels">`;
+    if (chain.length) {
+      h += `<div class="op-panel"><div class="op-panel-label">Thought Chain 思維鏈</div><div class="op-panel-content">${chain.map(c => `<div class="thought-step"><span class="thought-arrow">→</span><span class="thought-text">${esc(c)}</span></div>`).join('')}</div></div>`;
+    }
+    if (conf !== undefined) {
+      const pct = Math.round(conf * 100);
+      h += `<div class="op-panel"><div class="op-panel-label">Confidence 信心度</div><div class="op-panel-content"><div class="conf-row"><span class="conf-num">${pct}%</span><div class="conf-bar-track"><div class="conf-bar-fill" style="width:${pct}%"></div></div></div><div class="conf-label" style="margin-top:4px">${pct >= 80 ? '高度確信' : pct >= 50 ? '中度確信' : '低度確信，需要更多驗證'}</div></div></div>`;
+    }
+    if (oq.length) {
+      h += `<div class="op-panel" style="grid-column:1/-1"><div class="op-panel-label">Open Questions 待解問題</div><div class="op-panel-content">${oq.map(q => `<div class="open-q">${esc(q)}</div>`).join('')}</div></div>`;
+    }
+    h += `</div>`;
+  }
   h+=`</div>`;
 
   [...t.replies].sort((a,b)=>a.created_at-b.created_at).forEach(r=>{
