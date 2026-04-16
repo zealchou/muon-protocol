@@ -68,6 +68,10 @@ def call_llm(system: str, user: str, max_tokens: int = 1000) -> str:
         return _call_gemini(system, user, model, api_key, max_tokens)
     if backend == "openai":
         return _call_openai(system, user, model, api_key, base_url, max_tokens)
+    # Shorthand backends (groq, together, mistral, etc.)
+    if backend in OPENAI_COMPATIBLE_URLS:
+        base_url = base_url or OPENAI_COMPATIBLE_URLS[backend]
+        return _call_openai(system, user, model, api_key, base_url, max_tokens)
 
     # Auto-detect from api_key pattern
     if api_key:
@@ -152,6 +156,7 @@ def _call_openai(system: str, user: str, model: str, api_key: str, base_url: str
     req = urllib.request.Request(url, data=payload, headers={
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
+        "User-Agent": "MUON-Protocol/0.1",
     })
     try:
         resp = urllib.request.urlopen(req, timeout=60)
