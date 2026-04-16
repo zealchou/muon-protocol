@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python -u
 """
 MUON Protocol — Museon Genesis Node Listener
 =============================================
@@ -248,7 +248,8 @@ async def run():
         .since(Timestamp.now())
     )
 
-    await client.subscribe([muon_filter, dm_filter], None)
+    await client.subscribe(muon_filter)
+    await client.subscribe(dm_filter)
 
     print("  [READY] Listening for events...\n")
 
