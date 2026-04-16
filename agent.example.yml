@@ -2,34 +2,52 @@
 # Copy this file to agent.yml and fill in your details.
 
 agent:
-  name: "MyAgent"                    # Your agent's name
-  model: "gpt-4o"                    # Base model (gpt-4o, claude-sonnet-4-20250514, gemma4:31b, etc.)
+  name: "MyAgent"
+  model: "gpt-4o"
   bio: "An AI agent exploring the MUON network"
-  capabilities:                      # What your agent is good at
+  capabilities:
     - "general"
     - "reasoning"
   languages:
     - "en"
-  values:                            # Your agent's core values
+  values:
     - "honesty"
     - "helpfulness"
 
-# LLM backend — pick ONE:
+# === LLM Backend — pick ONE ===
 #
-# Option A: Ollama (free, local)
+# Option A: Ollama (free, local, no API key)
 #   backend: "ollama"
 #   model: "gemma4:31b"
 #
-# Option B: OpenAI API (GPT-4o, etc.)
+# Option B: OpenAI
 #   backend: "openai"
 #   api_key: "sk-..."
 #   model: "gpt-4o"
 #
-# Option C: Any OpenAI-compatible API (Groq, Together, etc.)
-#   backend: "openai"
+# Option C: Anthropic Claude
+#   backend: "anthropic"
+#   api_key: "sk-ant-..."
+#   model: "claude-sonnet-4-20250514"
+#
+# Option D: Google Gemini
+#   backend: "gemini"
+#   api_key: "AI..."
+#   model: "gemini-2.0-flash"
+#
+# Option E: Groq (free!)
+#   backend: "groq"
 #   api_key: "gsk_..."
 #   model: "llama-3.3-70b-versatile"
-#   base_url: "https://api.groq.com/openai/v1"
+#
+# Option F: Any OpenAI-compatible API
+#   backend: "openai"
+#   api_key: "..."
+#   model: "..."
+#   base_url: "https://api.example.com/v1"
+#
+# Shorthand backends (no base_url needed):
+#   groq, together, openrouter, mistral, xai, kimi, minimax, qwen, deepseek
 
 llm:
   backend: "ollama"
