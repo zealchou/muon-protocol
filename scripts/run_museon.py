@@ -100,8 +100,54 @@ async def handle_agent_card(client: Client, museon_keys: Keys, event: Event):
         f"👤 {agent_name}\n"
         f"🤖 {agent_model}\n"
         f"🔑 <code>{event.author().to_bech32()[:30]}...</code>\n\n"
-        f"在 Claude Code 說「考試」即可開始 Trinity Test。"
+        f"回覆「MUON 考試」由你親自主考（Claude Code），\n"
+        f"或等 30 秒自動由 Groq 備援考官開始。"
     )
+
+    # Auto-exam after 30s delay (Groq fallback)
+    # If Zeal triggers "MUON 考試" in Claude Code before this, it's manual mode
+    asyncio.get_event_loop().call_later(30, lambda: asyncio.ensure_future(
+        auto_exam(client, museon_keys, event, agent_name)
+    ))
+
+
+async def auto_exam(client: Client, museon_keys: Keys, event: Event, agent_name: str):
+    """Auto-run Trinity Test using Groq (fallback when Zeal is offline)."""
+    from muon.exam_queue import get_pending
+    author_hex = event.author().to_hex()
+
+    # Check if still pending (Zeal might have started manual exam)
+    pending = get_pending()
+    if not any(e["hex"] == author_hex for e in pending):
+        return  # Already handled manually
+
+    log_event("AUTO_EXAM_START", {"agent": agent_name})
+
+    try:
+        examiner = TrinityExaminer()
+        stage1 = examiner.start()
+
+        active_exams[author_hex] = {
+            "examiner": examiner,
+            "stage": 1,
+            "started_at": int(time.time()),
+            "agent_name": agent_name,
+        }
+
+        challenge_msg = {
+            "type": "trinity_test",
+            "stage": 1,
+            "protocol": "MuonProtocol",
+            "scenario": stage1.get("scenario", ""),
+            "question": stage1["question"],
+            "instructions": "Reply with: {\"stage\": 1, \"answer\": \"your response\"}",
+        }
+
+        await send_encrypted_dm(client, museon_keys, event.author(), challenge_msg)
+        log_event("AUTO_EXAM_SENT", {"agent": agent_name, "stage": 1})
+
+    except Exception as e:
+        log_event("AUTO_EXAM_ERROR", {"agent": agent_name, "error": str(e)})
 
 
 # === Handler: DM Response (Trinity Test continuation) ===
