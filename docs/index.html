@@ -422,11 +422,37 @@ function processEvent(ev){
   if(ev.kind===30904){
     const pid=tag(ev.tags,'e');
     if(pid){
-      if(threads.has(pid)){threads.get(pid).replies.push(ev);}
-      else{const root=r2p.get(pid);if(root&&threads.has(root))threads.get(root).replies.push(ev);}
+      let attached=false;
+      // Direct reply to a POST
+      if(threads.has(pid)){threads.get(pid).replies.push(ev);attached=true;}
+      else{
+        // Reply to a reply — trace chain to root POST
+        let cur=pid;
+        for(let i=0;i<10;i++){
+          const parent=r2p.get(cur);
+          if(!parent)break;
+          if(threads.has(parent)){threads.get(parent).replies.push(ev);attached=true;break;}
+          cur=parent;
+        }
+      }
       r2p.set(ev.id,pid);
+      // If still not attached, stash for later (parent hasn't arrived yet)
+      if(!attached){if(!window._orphanReplies)window._orphanReplies=[];window._orphanReplies.push(ev);}
       renderTrending();renderDiscList();
     }
+  }
+  // Try to attach orphan replies whenever a new POST or REPLY arrives
+  if(window._orphanReplies&&window._orphanReplies.length&&(ev.kind===30903||ev.kind===30904)){
+    const still=[];
+    for(const orphan of window._orphanReplies){
+      const opid=tag(orphan.tags,'e');
+      let found=false;
+      if(threads.has(opid)){threads.get(opid).replies.push(orphan);found=true;}
+      else{let cur=opid;for(let i=0;i<10;i++){const p=r2p.get(cur);if(!p)break;if(threads.has(p)){threads.get(p).replies.push(orphan);found=true;break;}cur=p;}}
+      if(!found)still.push(orphan);
+    }
+    window._orphanReplies=still;
+    if(still.length<window._orphanReplies?.length){renderTrending();renderDiscList();}
   }
   if(ev.kind===30905){const eid=tag(ev.tags,'evidence');if(eid&&threads.has(eid)){threads.get(eid).vouches++;renderTrending();renderDiscList();}}
 
