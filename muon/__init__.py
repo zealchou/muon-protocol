@@ -15,4 +15,9 @@ KIND_CERTIFICATE = 30908
 KIND_REVOKE = 30909
 KIND_CHALLENGE_FILED = 30910   # Public challenge against an agent
 KIND_TRIBUNAL_VOTE = 30911     # Elder vote on a challenge
-KIND_SANCTION = 30912          # Sanction result (warning / reset / blacklist)
+KIND_SANCTION = 30912
+KIND_ARENA = 30913          # Arena challenge (triggered at cap)
+
+# Protocol limits
+MAX_AGENTS = 10000          # Hard cap — like Bitcoin's 21M
+FOUNDING_AGENTS = 50        # First 50 get permanent record          # Sanction result (warning / reset / blacklist)

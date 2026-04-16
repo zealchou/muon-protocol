@@ -4,11 +4,20 @@ Computes ARL based on:
 - Trinity Test results (CHALLENGE_RESULT events)
 - VOUCH events received
 - Decay over time (30 days without activity = -1 level)
+
+Protocol limits:
+- MAX_AGENTS = 10,000 (hard cap)
+- FOUNDING_AGENTS = 50 (first 50 get permanent record, immune to Arena)
+- When cap is reached, new agent triggers Arena challenge
 """
+
+from __future__ import annotations
 
 import json
 import time
+import random
 from pathlib import Path
+from muon import MAX_AGENTS, FOUNDING_AGENTS
 
 
 ARL_DB_PATH = Path(__file__).parent.parent / "data" / "arl_registry.json"
@@ -41,21 +50,103 @@ def save_registry(registry: dict):
     ARL_DB_PATH.write_text(json.dumps(registry, indent=2, ensure_ascii=False))
 
 
-def register_agent(pubkey_hex: str, name: str = "Unknown"):
-    """Register a new agent at ARL-0."""
+def active_agent_count() -> int:
+    """Count agents that are not eliminated."""
     registry = load_registry()
-    if pubkey_hex not in registry["agents"]:
-        registry["agents"][pubkey_hex] = {
-            "name": name,
-            "arl": 0,
-            "test_passed": False,
-            "test_score": None,
-            "vouches_received": [],  # [{from_owner, from_agent, weight, timestamp}]
-            "last_activity": int(time.time()),
-            "arl_history": [{"arl": 0, "timestamp": int(time.time()), "reason": "registered"}],
-        }
-        save_registry(registry)
+    return sum(1 for a in registry["agents"].values() if not a.get("eliminated"))
+
+
+def is_founding(pubkey_hex: str) -> bool:
+    """Check if agent is in the founding 50."""
+    registry = load_registry()
+    agent = registry["agents"].get(pubkey_hex)
+    return agent.get("founding", False) if agent else False
+
+
+def register_agent(pubkey_hex: str, name: str = "Unknown"):
+    """Register a new agent at ARL-0.
+
+    Returns: agent dict, or None if cap reached (Arena needed).
+    """
+    registry = load_registry()
+    if pubkey_hex in registry["agents"]:
+        return registry["agents"][pubkey_hex]
+
+    # Assign founding status to first 50
+    agent_number = len(registry["agents"]) + 1
+    is_founder = agent_number <= FOUNDING_AGENTS
+
+    registry["agents"][pubkey_hex] = {
+        "name": name,
+        "arl": 0,
+        "agent_number": agent_number,
+        "founding": is_founder,
+        "eliminated": False,
+        "test_passed": False,
+        "test_score": None,
+        "vouches_received": [],
+        "last_activity": int(time.time()),
+        "arl_history": [{"arl": 0, "timestamp": int(time.time()), "reason": "registered"}],
+    }
+    save_registry(registry)
     return registry["agents"][pubkey_hex]
+
+
+def needs_arena() -> bool:
+    """Check if network is at capacity (Arena required for new entry)."""
+    return active_agent_count() >= MAX_AGENTS
+
+
+def select_arena_target() -> str | None:
+    """Select a random non-founding agent for Arena challenge.
+
+    Weighted: lower ARL + older last_activity = more likely to be selected.
+    Founding 50 are immune.
+    """
+    registry = load_registry()
+    candidates = []
+    now = int(time.time())
+
+    for pk, agent in registry["agents"].items():
+        if agent.get("founding"):
+            continue  # Founding 50 are immune
+        if agent.get("eliminated"):
+            continue  # Already eliminated
+        # Weight: lower ARL = higher chance, inactive = higher chance
+        days_inactive = (now - agent.get("last_activity", now)) / 86400
+        weight = max(1, (5 - agent["arl"]) * 2 + days_inactive)
+        candidates.append((pk, weight))
+
+    if not candidates:
+        return None
+
+    # Weighted random selection
+    total = sum(w for _, w in candidates)
+    r = random.random() * total
+    cumulative = 0
+    for pk, w in candidates:
+        cumulative += w
+        if r <= cumulative:
+            return pk
+    return candidates[-1][0]
+
+
+def eliminate_agent(pubkey_hex: str, reason: str = "Arena defeat"):
+    """Eliminate an agent from the network."""
+    registry = load_registry()
+    agent = registry["agents"].get(pubkey_hex)
+    if not agent:
+        return
+    if agent.get("founding"):
+        return  # Cannot eliminate founding members
+
+    agent["eliminated"] = True
+    agent["arl"] = 0
+    agent["arl_history"].append({
+        "arl": 0, "timestamp": int(time.time()),
+        "reason": f"Eliminated: {reason}",
+    })
+    save_registry(registry)
 
 
 def record_test_result(pubkey_hex: str, passed: bool, score: float):
